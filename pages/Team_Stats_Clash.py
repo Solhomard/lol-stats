@@ -10,8 +10,8 @@ STATS_CONFIG = {
         "Kills": {"col": "Kills", "title": "Kills par partie", "fmt": "%{y}"},
         "Dégâts": {"col": "Dégâts", "title": "Dégâts aux champions", "fmt": "%{y:.2s}"},
         "Dégâts (%)": {"col": "Dégâts (%)", "title": "Part des dégâts de l'équipe", "fmt": "%{y:.1%}"},
-        "Kill Participation": {"col": "Kill Participation", "title": "Participation aux Kills (%)", "fmt": "%{y:.1%}"},
-        "Dégâts Objectifs": {"col": "Dégâts Objectifs", "title": "Dégâts aux Objectifs (Tours/Dragons...)", "fmt": "%{y:.2s}"},
+        #"Kill Participation": {"col": "Kill Participation", "title": "Participation aux Kills (%)", "fmt": "%{y:.1%}"},
+        #"Dégâts Objectifs": {"col": "Dégâts Objectifs", "title": "Dégâts aux Objectifs (Tours/Dragons...)", "fmt": "%{y:.2s}"},
     },
     "Tanking": {
         "Dégâts Reçus": {"col": "Dégâts Reçus", "title": "Dégâts Reçus", "fmt": "%{y:.2s}"},
@@ -19,7 +19,7 @@ STATS_CONFIG = {
     },
     "Farming & Gold": {
         "CS/Min": {"col": "Nombre de CS par minute", "title": "Farm par minute", "fmt": "%{y:.1f}"},
-        "CS @10": {"col": "Nombre de CS at 10", "title": "CS à 10 minutes", "fmt": "%{y}"},
+        "CS@10": {"col": "Nombre de CS at 10", "title": "CS à 10 minutes", "fmt": "%{y}"},
         "Gold": {"col": "Gold", "title": "Or gagné", "fmt": "%{y:.2s}"},
     },
     "Vision": {

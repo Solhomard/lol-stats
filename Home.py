@@ -6,28 +6,28 @@ import streamlit as st
 
 # --- Gestion du mot de passe ---
 
-def check_password():
-    if "PASSWORD" not in st.secrets:
-        return True
-
-    def password_entered():
-        if st.session_state["password"] == st.secrets["PASSWORD"]:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-
-    if st.session_state.get("password_correct", False):
-        return True
-    
-    st.text_input("Mot de passe", type="password", on_change=password_entered, key="password")
-
-    if "password_correct" in st.session_state:
-        st.error("Mot de passe incorrect")
-    return False
-
-if not check_password():
-    st.stop()
+#def check_password():
+#    if "PASSWORD" not in st.secrets:
+#        return True
+#
+#    def password_entered():
+#        if st.session_state["password"] == st.secrets["PASSWORD"]:
+#            st.session_state["password_correct"] = True
+#            del st.session_state["password"]
+#        else:
+#            st.session_state["password_correct"] = False
+#
+#    if st.session_state.get("password_correct", False):
+#        return True
+#    
+#    st.text_input("Mot de passe", type="password", on_change=password_entered, key="password")
+#
+#    if "password_correct" in st.session_state:
+#        st.error("Mot de passe incorrect")
+#    return False
+#
+#if not check_password():
+#    st.stop()
 
 
 # --- Configuration de la page ---
@@ -38,6 +38,8 @@ st.title("🏆 Accueil - Chargement des Données")
 
 DATA_FOLDER = 'games'
 ALL_MATCHES = []
+
+# -- Fonction de chargement des fichiers locaux --
 
 def load_local_games(directory='games'):
     loaded_data = []

@@ -8,13 +8,6 @@ if 'matches_data' not in st.session_state or not st.session_state['matches_data'
     st.error("Données manquantes. Allez à l'Accueil.")
 else:
     matches = st.session_state['matches_data']
-    matches += st.session_state['matches_data_file']
-    st.title("⚔️ Comparateur de Joueurs")
-
-if 'matches_data_file' not in st.session_state or not st.session_state['matches_data_file']:
-    st.error("Données manquantes. Allez à l'Accueil.")
-else:
-    matches = st.session_state['matches_data_file']
     st.title("⚔️ Comparateur de Joueurs")
 
     # Extraction des données spécifiques pour la comparaison

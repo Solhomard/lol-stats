@@ -6,47 +6,18 @@ import os
 
 # --- Configuration de la page ---
 
-DATA_FOLDER = 'games'
 TARGET_PLAYERS = ["Magical craft", "Frozabys", "LeDoréLoup", "KatastrOhfiak", "Ohfiak"]
 ROLE_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
-
+matches_data = []
 
 st.set_page_config(page_title="Clash Analyst", layout="wide")
 
 st.title("⚔️ Analyseur de Stats League of Legends")
-st.markdown("Uploade tes fichiers JSON pour visualiser les performances.")
 
-# --- 1. Zone d'upload (Sidebar) ---
-st.sidebar.header("Données")
-uploaded_files = st.sidebar.file_uploader(
-    "Charge tes fichiers JSON de match", 
-    type=['json'], 
-    accept_multiple_files=True
-)
-
-@st.cache_data
-def load_data(folder_path):
-    all_matches = []
-    
-    if not os.path.exists(folder_path):
-        st.error(f"Le dossier '{folder_path}' est introuvable.")
-        return []
-    
-    files = [f for f in os.listdir(folder_path) if f.endswith('.json')]
-
-    if not files:
-        st.warning("Aucun fichier JSON trouvé dans le dossier.")
-        return []
-    
-    for filename in files:
-        file_path = os.path.join(folder_path, filename)
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = json.load(f)
-                all_matches.append(content)
-        except Exception as e:
-            st.error(f"Erreur lors du chargement de {filename}: {e}")
-    return all_matches
+if 'matches_data' not in st.session_state or not st.session_state['matches_data']:
+    st.error("Données manquantes. Allez à l'Accueil.")
+else:
+    matches_data = st.session_state['matches_data']
 
 
 # --- 2. Fonction de traitement des données ---
@@ -70,7 +41,6 @@ def process_files(matches):
                     all_found_players.add(name)
 
                 if name in TARGET_PLAYERS:
-                    # On récupère toutes les stats intéressantes d'un coup
                     row = {
                         "Game": game_label,
                         "Joueur": name,
@@ -78,7 +48,17 @@ def process_files(matches):
                         "Position_Raw": player.get('teamPosition', 'UNKNOWN'),
                         "Dégâts": player['totalDamageDealtToChampions'],
                         "Dégâts (%)": player.get('challenges', {}).get('teamDamagePercentage', 0),
+                        "Dégâts Reçus": player.get('totalDamageTaken', 0),
+                        "Dégâts Reçus (%)": player.get('challenges', {}).get('damageTakenOnTeamPercentage', 0),
+                        "Dégâts Réduits sur soi": player.get('damageSelfMitigated', 0),
                         "Gold": player['goldEarned'],
+                        "Score de Vision": player.get('visionScore', 0),
+                        "Nombre de CS": player.get('totalMinionsKilled', 0) + player.get('neutralMinionsKilled', 0),
+                        "Nombre de CS par minute": round((player.get('totalMinionsKilled', 0) + player.get('neutralMinionsKilled', 0)) / (match['info']['gameDuration'] / 60), 2),
+                        "Nombre de CS at 10": player.get('challenges', {}).get('laneMinionsFirst10Minutes', 0) + player.get('challenges', {}).get('jungleCsBefore10Minutes', 0),
+                        "Kills": player['kills'],
+                        "Deaths": player['deaths'],
+                        "Assists": player['assists'],
                         "KDA": f"{player['kills']}/{player['deaths']}/{player['assists']}"
                     }
                     data_rows.append(row)
@@ -93,25 +73,19 @@ def process_files(matches):
 
     return df, list(all_found_players)
 
-matches_data = load_data(DATA_FOLDER)
 
 # --- 3. Affichage Principal ---
 if matches_data:
-    st.success(f"✅ {len(matches_data)} parties chargées depuis le serveur.")
-    # Création du DataFrame (Tableau de données)
     df, all_players_list = process_files(matches_data)
     
     if df.empty:
         st.error("Aucun des joueurs ciblés n'a été trouvé dans les fichiers uploadés.")
         st.write("Joueurs trouvés : " + ", ".join(all_players_list))
-
-
     else:
-            
         # Sélecteur de stat
         stat_choice = st.radio(
             "Quelle statistique afficher ?",
-            ["Dégâts", "Dégâts (%)", "Gold"],
+            ["Kills", "Deaths", "Assists", "Dégâts", "Dégâts (%)", "Dégâts Reçus", "Dégâts Reçus (%)", "Dégâts Réduits sur soi", "Nombre de CS", "Nombre de CS par minute", "Nombre de CS%10", "Score de Vision", "Gold"],
             horizontal=True
         )
         
@@ -124,6 +98,46 @@ if matches_data:
             y_axis = "Dégâts (%)"
             title = "Pourcentage des dégâts de l'équipe"
             text_format = "%{y:.1%}" # Format pourcentage
+        elif stat_choice == "Dégâts Reçus":
+            y_axis = "Dégâts Reçus"
+            title = "Dégâts reçus totaux par partie"
+            text_format = "%{y:.2s}" # Format compact (25k)
+        elif stat_choice == "Dégâts Reçus (%)":
+            y_axis = "Dégâts Reçus (%)"
+            title = "Pourcentage des dégâts reçus de l'équipe"
+            text_format = "%{y:.1%}" # Format pourcentage
+        elif stat_choice == "Dégâts Réduits sur soi":
+            y_axis = "Dégâts Réduits sur soi"
+            title = "Dégâts réduits par le joueur"
+            text_format = "%{y}" # Format plus précis
+        elif stat_choice == "Score de Vision":
+            y_axis = "Score de Vision"
+            title = "Score de Vision par partie"
+            text_format = "%{y}"
+        elif stat_choice == "Nombre de CS":
+            y_axis = "Nombre de CS"
+            title = "Nombre de CS par partie"
+            text_format = "%{y}"
+        elif stat_choice == "Nombre de CS par minute":
+            y_axis = "Nombre de CS par minute"
+            title = "Nombre de CS par minute"
+            text_format = "%{y:.1f}"
+        elif stat_choice == "Nombre de CS%10":
+            y_axis = "Nombre de CS at 10"
+            title = "Nombre de CS à 10 minutes"
+            text_format = "%{y}"
+        elif stat_choice == "Kills":
+            y_axis = "Kills"
+            title = "Kills par partie"
+            text_format = "%{y}"
+        elif stat_choice == "Deaths":
+            y_axis = "Deaths"
+            title = "Deaths par partie"
+            text_format = "%{y}"
+        elif stat_choice == "Assists":
+            y_axis = "Assists"
+            title = "Assists par partie"
+            text_format = "%{y}"
         else:
             y_axis = "Gold"
             title = "Or gagné"
@@ -151,6 +165,3 @@ if matches_data:
         # Afficher le tableau de données brut en dessous si on veut vérifier
         with st.expander("Voir les données brutes"):
             st.dataframe(df)
-
-else:
-    st.info("👈 En attente de fichiers JSON dans la barre latérale.")

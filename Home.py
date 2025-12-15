@@ -7,7 +7,7 @@ st.set_page_config(page_title="LoL Analyst", page_icon="🏆")
 
 st.title("🏆 Accueil - Chargement des Données")
 
-DATA_FOLDER = 'C:\\Users\\solho\\OneDrive\\Documents\\Riot_API\\site\\games'
+DATA_FOLDER = 'games'
 ALL_MATCHES = []
 
 # 1. Widget d'upload

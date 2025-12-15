@@ -3,5 +3,3 @@ pandas
 plotly
 matplotlib
 numpy
-os
-json

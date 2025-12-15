@@ -6,7 +6,7 @@ import os
 
 # --- Configuration de la page ---
 
-DATA_FOLDER = 'C:\\Users\\solho\\OneDrive\\Documents\\Riot_API\\site\\games'
+DATA_FOLDER = 'games'
 TARGET_PLAYERS = ["Magical craft", "Frozabys", "LeDoréLoup", "KatastrOhfiak", "Ohfiak"]
 ROLE_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 

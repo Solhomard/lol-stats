@@ -3,6 +3,30 @@ import json
 import pandas as pd
 import plotly.express as px
 import os
+        #"KDA": {"col": "KDA_Ratio", "title": "Ration KDA", "fmt": "%{y:.2f}"},
+
+STATS_CONFIG = {
+    "Combat": {
+        "Kills": {"col": "Kills", "title": "Kills par partie", "fmt": "%{y}"},
+        "Dégâts": {"col": "Dégâts", "title": "Dégâts aux champions", "fmt": "%{y:.2s}"},
+        "Dégâts (%)": {"col": "Dégâts (%)", "title": "Part des dégâts de l'équipe", "fmt": "%{y:.1%}"},
+        "Kill Participation": {"col": "Kill Participation", "title": "Participation aux Kills (%)", "fmt": "%{y:.1%}"},
+        "Dégâts Objectifs": {"col": "Dégâts Objectifs", "title": "Dégâts aux Objectifs (Tours/Dragons...)", "fmt": "%{y:.2s}"},
+    },
+    "Tanking": {
+        "Dégâts Reçus": {"col": "Dégâts Reçus", "title": "Dégâts Reçus", "fmt": "%{y:.2s}"},
+        "Dégâts Réduits": {"col": "Dégâts Réduits sur soi", "title": "Dégâts auto-mitigés", "fmt": "%{y:.2s}"},
+    },
+    "Farming & Gold": {
+        "CS/Min": {"col": "Nombre de CS par minute", "title": "Farm par minute", "fmt": "%{y:.1f}"},
+        "CS @10": {"col": "Nombre de CS at 10", "title": "CS à 10 minutes", "fmt": "%{y}"},
+        "Gold": {"col": "Gold", "title": "Or gagné", "fmt": "%{y:.2s}"},
+    },
+    "Vision": {
+        "Score Vision": {"col": "Score de Vision", "title": "Score de Vision", "fmt": "%{y}"},
+        "Wards Posées": {"col": "Wards Placed", "title": "Balises posées", "fmt": "%{y}"},
+    }
+}
 
 # --- Configuration de la page ---
 
@@ -11,7 +35,6 @@ ROLE_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 matches_data = []
 
 st.set_page_config(page_title="Clash Analyst", layout="wide")
-
 st.title("⚔️ Analyseur de Stats League of Legends")
 
 if 'matches_data' not in st.session_state or not st.session_state['matches_data']:
@@ -46,20 +69,29 @@ def process_files(matches):
                         "Joueur": name,
                         "Champion": player['championName'],
                         "Position_Raw": player.get('teamPosition', 'UNKNOWN'),
-                        "Dégâts": player['totalDamageDealtToChampions'],
-                        "Dégâts (%)": player.get('challenges', {}).get('teamDamagePercentage', 0),
-                        "Dégâts Reçus": player.get('totalDamageTaken', 0),
-                        "Dégâts Reçus (%)": player.get('challenges', {}).get('damageTakenOnTeamPercentage', 0),
-                        "Dégâts Réduits sur soi": player.get('damageSelfMitigated', 0),
-                        "Gold": player['goldEarned'],
-                        "Score de Vision": player.get('visionScore', 0),
-                        "Nombre de CS": player.get('totalMinionsKilled', 0) + player.get('neutralMinionsKilled', 0),
-                        "Nombre de CS par minute": round((player.get('totalMinionsKilled', 0) + player.get('neutralMinionsKilled', 0)) / (match['info']['gameDuration'] / 60), 2),
-                        "Nombre de CS at 10": player.get('challenges', {}).get('laneMinionsFirst10Minutes', 0) + player.get('challenges', {}).get('jungleCsBefore10Minutes', 0),
+
+                        # Stats Combat
                         "Kills": player['kills'],
                         "Deaths": player['deaths'],
                         "Assists": player['assists'],
-                        "KDA": f"{player['kills']}/{player['deaths']}/{player['assists']}"
+                        "KDA": f"{player['kills']}/{player['deaths']}/{player['assists']}",
+                        "Dégâts": player['totalDamageDealtToChampions'],
+                        "Dégâts (%)": player.get('challenges', {}).get('teamDamagePercentage', 0),
+
+                        # Stats Tanking
+                        "Dégâts Reçus": player.get('totalDamageTaken', 0),
+                        "Dégâts Reçus (%)": player.get('challenges', {}).get('damageTakenOnTeamPercentage', 0),
+                        "Dégâts Réduits sur soi": player.get('damageSelfMitigated', 0),
+
+                        # Stats Farming & Gold
+                        "Gold": player['goldEarned'],
+                        "Nombre de CS": player.get('totalMinionsKilled', 0) + player.get('neutralMinionsKilled', 0),
+                        "Nombre de CS par minute": round((player.get('totalMinionsKilled', 0) + player.get('neutralMinionsKilled', 0)) / (match['info']['gameDuration'] / 60), 2),
+                        "Nombre de CS at 10": player.get('challenges', {}).get('laneMinionsFirst10Minutes', 0) + player.get('challenges', {}).get('jungleCsBefore10Minutes', 0),
+
+                        # Stats Vision
+                        "Score de Vision": player.get('visionScore', 0),
+                        "Wards Placed": player.get('wardsPlaced', 0),                        
                     }
                     data_rows.append(row)
                     
@@ -82,86 +114,42 @@ if matches_data:
         st.error("Aucun des joueurs ciblés n'a été trouvé dans les fichiers uploadés.")
         st.write("Joueurs trouvés : " + ", ".join(all_players_list))
     else:
-        # Sélecteur de stat
-        stat_choice = st.radio(
-            "Quelle statistique afficher ?",
-            ["Kills", "Deaths", "Assists", "Dégâts", "Dégâts (%)", "Dégâts Reçus", "Dégâts Reçus (%)", "Dégâts Réduits sur soi", "Nombre de CS", "Nombre de CS par minute", "Nombre de CS%10", "Score de Vision", "Gold"],
-            horizontal=True
-        )
+
+        col1, col2 = st.columns([1,3])
+
+        with col1:
+            st.subheader("Paramètres")
+            category = st.selectbox("Catégorie", list(STATS_CONFIG.keys()))
+            stat_name = st.selectbox("Statistique", list(STATS_CONFIG[category].keys()))
+
+            current_config = STATS_CONFIG[category][stat_name]
+            y_axis_col = current_config["col"]
+
+        with col2:
+            st.subheader(current_config.get("title", y_axis_col))
+
+            format_str = current_config.get("fmt", "%{y}")
+
+            fig = px.bar(
+                df,
+                x="Joueur",
+                y=y_axis_col,
+                color="Game",
+                text="Champion",
+                title=f"{current_config["title"]} par joueur",
+                hover_data={
+                    "Game": True,
+                    "Joueur": True,
+                    "KDA": True,
+                    "Champion": True,
+                    y_axis_col: True # Affiche la valeur de la statistique en hover, y_axis_col ? au lieu de True
+                },
+                barmode="stack" #group = côte à côte, stack = empilé
+            )
+
+            fig.update_traces(texttemplate='%{text}<br>' + format_str, textposition='inside')
+            fig.update_layout(height=600, xaxis_title=None)
+            st.plotly_chart(fig, use_container_width=True)
         
-        # Création du graphique interactif avec PLOTLY
-        if stat_choice == "Dégâts":
-            y_axis = "Dégâts"
-            title = "Dégâts totaux par partie"
-            text_format = "%{y:.2s}" # Format compact (25k)
-        elif stat_choice == "Dégâts (%)":
-            y_axis = "Dégâts (%)"
-            title = "Pourcentage des dégâts de l'équipe"
-            text_format = "%{y:.1%}" # Format pourcentage
-        elif stat_choice == "Dégâts Reçus":
-            y_axis = "Dégâts Reçus"
-            title = "Dégâts reçus totaux par partie"
-            text_format = "%{y:.2s}" # Format compact (25k)
-        elif stat_choice == "Dégâts Reçus (%)":
-            y_axis = "Dégâts Reçus (%)"
-            title = "Pourcentage des dégâts reçus de l'équipe"
-            text_format = "%{y:.1%}" # Format pourcentage
-        elif stat_choice == "Dégâts Réduits sur soi":
-            y_axis = "Dégâts Réduits sur soi"
-            title = "Dégâts réduits par le joueur"
-            text_format = "%{y}" # Format plus précis
-        elif stat_choice == "Score de Vision":
-            y_axis = "Score de Vision"
-            title = "Score de Vision par partie"
-            text_format = "%{y}"
-        elif stat_choice == "Nombre de CS":
-            y_axis = "Nombre de CS"
-            title = "Nombre de CS par partie"
-            text_format = "%{y}"
-        elif stat_choice == "Nombre de CS par minute":
-            y_axis = "Nombre de CS par minute"
-            title = "Nombre de CS par minute"
-            text_format = "%{y:.1f}"
-        elif stat_choice == "Nombre de CS%10":
-            y_axis = "Nombre de CS at 10"
-            title = "Nombre de CS à 10 minutes"
-            text_format = "%{y}"
-        elif stat_choice == "Kills":
-            y_axis = "Kills"
-            title = "Kills par partie"
-            text_format = "%{y}"
-        elif stat_choice == "Deaths":
-            y_axis = "Deaths"
-            title = "Deaths par partie"
-            text_format = "%{y}"
-        elif stat_choice == "Assists":
-            y_axis = "Assists"
-            title = "Assists par partie"
-            text_format = "%{y}"
-        else:
-            y_axis = "Gold"
-            title = "Or gagné"
-            text_format = "%{y}"
-
-        # Construction du graphique
-        fig = px.bar(
-            df, 
-            x="Joueur", 
-            y=y_axis, 
-            color="Game", 
-            text="Champion", # Affiche le nom du champion dans la barre
-            title=title,
-            hover_data=["KDA", "Champion"], # Ce qui apparait quand on passe la souris
-            barmode="stack"
-        )
-    
-        # Personnalisation du texte
-        fig.update_traces(texttemplate='%{text}<br>' + text_format, textposition='inside')
-        fig.update_layout(height=600)
-
-        # Affichage sur le site
-        st.plotly_chart(fig, use_container_width=True)
-    
-        # Afficher le tableau de données brut en dessous si on veut vérifier
         with st.expander("Voir les données brutes"):
             st.dataframe(df)

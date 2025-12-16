@@ -8,16 +8,20 @@ import os
 STATS_CONFIG = {
     "Combat": {
         "Kills": {"col": "Kills", "title": "Kills par partie", "fmt": "%{y}"},
+        "Morts": {"col": "Deaths", "title": "Morts par partie", "fmt": "%{y}"},
+        "Assists": {"col": "Assists", "title": "Assists par partie", "fmt": "%{y}"},
         "Dégâts": {"col": "Dégâts", "title": "Dégâts aux champions", "fmt": "%{y:.2s}"},
         "Dégâts (%)": {"col": "Dégâts (%)", "title": "Part des dégâts de l'équipe", "fmt": "%{y:.1%}"},
         "Dégâts Par Minute": {"col": "Dégâts Par Minute", "title": "Dégâts par aux champion par minute", "fmt": "%{y:.2s}"},
         "Dégâts Par Gold": {"col": "Dégâts Par Gold", "title": "Dégâts par or dépensé", "fmt": "%{y:.2f}"},
         "Kill Participation": {"col": "Kill Participation", "title": "Participation aux Kills (%)", "fmt": "%{y:.1%}"},
         "Nombre de Solo Kills": {"col": "Nombre de Solo Kills", "title": "Nombre de Solo Kills", "fmt": "%{y}"},
+        "Heal & Shield sur Alliés": {"col": "Heal & Shield sur Alliés", "title": "Soins et Boucliers sur alliés", "fmt": "%{y:.2s}"},
     },
     "Tanking": {
         "Dégâts Reçus": {"col": "Dégâts Reçus", "title": "Dégâts Reçus", "fmt": "%{y:.2s}"},
         "Dégâts Réduits": {"col": "Dégâts Réduits sur soi", "title": "Dégâts auto-mitigés", "fmt": "%{y:.2s}"},
+        "Heal Total": {"col": "Heal Total", "title": "Soins Totaux", "fmt": "%{y:.2s}"},
     },
     "Farming & Gold": {
         "Nombre de CS": {"col": "Nombre de CS", "title": "Total de CS", "fmt": "%{y}"},
@@ -25,6 +29,7 @@ STATS_CONFIG = {
         "CS@10": {"col": "Nombre de CS at 10", "title": "CS à 10 minutes", "fmt": "%{y}"},
         "Gold": {"col": "Gold", "title": "Or gagné", "fmt": "%{y:.2s}"},
         "Gold par Minute": {"col": "Gold par Minute", "title": "Or gagné par minute", "fmt": "%{y:.1f}"},
+        "Counter Jungle CS": {"col": "Counter Jungle CS", "title": "CS de la jungle adverse", "fmt": "%{y}"},
     },
     "Objectifs": {
         "Dégâts Objectifs": {"col": "Dégâts Objectifs", "title": "Dégâts aux Objectifs (Tours/Dragons...)", "fmt": "%{y:.2s}"},
@@ -49,6 +54,7 @@ STATS_CONFIG = {
         "Nombre de Skillshots Esquivés": {"col": "Nombre de Skillshots Esquivés", "title": "Nombre de Skillshots Esquivés", "fmt": "%{y}"},
         "Nombre de Skillshots Touchés": {"col": "Nombre de Skillshots Touchés", "title": "Nombre de Skillshots Touchés", "fmt": "%{y}"},
         "Nombre de Kills en Infériorité Numérique": {"col": "Nombre de Kills en Infériorité Numérique", "title": "Nombre de Kills en Infériorité Numérique", "fmt": "%{y}"},
+        "Nombre de Temps Passé Mort": {"col": "Total de Temps passé mort", "title": "Total de Temps passé mort", "fmt": "%{y}"},
     }
 }
 
@@ -105,11 +111,13 @@ def process_files(matches):
                         "Dégâts Par Gold": round(player['totalDamageDealtToChampions'] / player['goldSpent'], 2) if player['goldEarned'] > 0 else 0,
                         "Kill Participation": player.get('challenges', {}).get('killParticipation', 0),
                         "Nombre de Solo Kills": player.get('challenges', {}).get('soloKills', 0),
+                        "Heal & Shield sur Alliés": player.get('totalHealsOnTeammates', 0) + player.get('totalDamageShieldedOnTeammates', 0),
 
                         # Stats Tanking
                         "Dégâts Reçus": player.get('totalDamageTaken', 0),
                         "Dégâts Reçus (%)": player.get('challenges', {}).get('damageTakenOnTeamPercentage', 0),
                         "Dégâts Réduits sur soi": player.get('damageSelfMitigated', 0),
+                        "Heal Total": player.get('totalHeal', 0),
 
                         # Stats Farming & Gold
                         "Nombre de CS": player.get('totalMinionsKilled', 0) + player.get('neutralMinionsKilled', 0),
@@ -117,6 +125,7 @@ def process_files(matches):
                         "Nombre de CS at 10": player.get('challenges', {}).get('laneMinionsFirst10Minutes', 0) + player.get('challenges', {}).get('jungleCsBefore10Minutes', 0),
                         "Gold": player['goldEarned'],
                         "Gold par Minute": player.get('challenges', {}).get('goldPerMinute', 0),
+                        "Counter Jungle CS": player.get('challenges', {}).get('enemyJungleMonsterKills', 0),
 
                         # Stats Objectifs
                         "Dégâts Objectifs": player.get('damageDealtToObjectives', 0),
@@ -141,6 +150,7 @@ def process_files(matches):
                         "Nombre de Skillshots Esquivés": player.get('challenges', {}).get('skillshotsDodged', 0),
                         "Nombre de Skillshots Touchés": player.get('challenges', {}).get('skillshotsHit', 0),
                         "Nombre de Kills en Infériorité Numérique": player.get('challenges', {}).get('outnumberedKills', 0),
+                        "Total de Temps passé mort": player.get('totalTimeSpentDead', 0),
                     }
                     data_rows.append(row)
                     
@@ -168,37 +178,42 @@ if matches_data:
 
         with col1:
             st.subheader("Paramètres")
-            category = st.selectbox("Catégorie", list(STATS_CONFIG.keys()))
-            stat_name = st.selectbox("Statistique", list(STATS_CONFIG[category].keys()))
+            category = st.pills("Catégorie", list(STATS_CONFIG.keys()), default="Combat")
+            if category is not None:
+                stat_name = st.pills("Statistique", list(STATS_CONFIG[category].keys()), default=list(STATS_CONFIG[category].keys())[0])
 
-            current_config = STATS_CONFIG[category][stat_name]
-            y_axis_col = current_config["col"]
+            current_config = None
+
+            if category is not None and stat_name is not None:
+                current_config = STATS_CONFIG[category][stat_name]
+                y_axis_col = current_config["col"]
 
         with col2:
-            st.subheader(current_config.get("title", y_axis_col))
+            if current_config is not None:
+                st.subheader(current_config.get("title", y_axis_col))
 
-            format_str = current_config.get("fmt", "%{y}")
+                format_str = current_config.get("fmt", "%{y}")
 
-            fig = px.bar(
-                df,
-                x="Joueur",
-                y=y_axis_col,
-                color="Game",
-                text="Champion",
-                title=f"{current_config["title"]} par joueur",
-                hover_data={
-                    "Game": True,
-                    "Joueur": True,
-                    "KDA": True,
-                    "Champion": True,
-                    y_axis_col: True # Affiche la valeur de la statistique en hover, y_axis_col ? au lieu de True
-                },
-                barmode="stack" #group = côte à côte, stack = empilé
-            )
+                fig = px.bar(
+                    df,
+                    x="Joueur",
+                    y=y_axis_col,
+                    color="Game",
+                    text="Champion",
+                    title=f"{current_config["title"]} par joueur",
+                    hover_data={
+                        "Game": True,
+                        "Joueur": True,
+                        "KDA": True,
+                        "Champion": True,
+                        y_axis_col: True # Affiche la valeur de la statistique en hover, format_str ? au lieu de True
+                    },
+                    barmode="stack" #group = côte à côte, stack = empilé
+                )
 
-            fig.update_traces(texttemplate='%{text}<br>' + format_str, textposition='inside')
-            fig.update_layout(height=600, xaxis_title=None)
-            st.plotly_chart(fig, use_container_width=True)
+                fig.update_traces(texttemplate='%{text}<br>' + format_str, textposition='inside')
+                fig.update_layout(height=600, xaxis_title=None)
+                st.plotly_chart(fig, use_container_width=True)
         
         with st.expander("Voir les données brutes"):
             st.dataframe(df)
